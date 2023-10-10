@@ -9,6 +9,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import * as dotenv from 'dotenv';
 import { CategoriesModule } from './categories/categories.module';
+import { UsersModule } from './users/users.module';
 
 dotenv.config();
 
@@ -26,7 +27,7 @@ dotenv.config();
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      url: 'postgresql://postgres:EEJfHofgGnnTMF7g@db.wofylnqdnasreblhljse.supabase.co:5432/postgres',
+      url: process.env.POSTGRES_URI,
       entities: [join(__dirname, '**', '*.entity.{ts,js}')],
       autoLoadEntities: true,
       synchronize: process.env.ENV !== 'production',
@@ -34,6 +35,7 @@ dotenv.config();
     }),
     CategoriesModule,
     WhatsappModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
