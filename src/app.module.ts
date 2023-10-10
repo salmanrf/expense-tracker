@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import * as dotenv from 'dotenv';
+import { CategoriesModule } from './categories/categories.module';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ dotenv.config();
       synchronize: process.env.ENV !== 'production',
       logging: process.env.ENV !== 'production',
     }),
+    CategoriesModule,
     WhatsappModule,
   ],
   controllers: [AppController],
