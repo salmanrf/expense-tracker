@@ -10,6 +10,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { CategoriesModule } from './categories/categories.module';
 import { UsersModule } from './users/users.module';
+import { MutationsModule } from './mutations/mutations.module';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ dotenv.config();
     CategoriesModule,
     WhatsappModule,
     UsersModule,
+    MutationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
