@@ -1,19 +1,10 @@
-import {
-  IsDateString,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsDate, IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
 import { MUTATION_TYPES } from 'src/constants/mutation';
 
 export class CreateMutationDto {
   @IsNumber()
   @IsOptional()
-  category_id: number;
-
-  @IsString()
-  user_id: string;
+  category_id?: number;
 
   @IsNumber()
   amount: number;
@@ -25,6 +16,8 @@ export class CreateMutationDto {
   @IsIn(MUTATION_TYPES)
   type: string;
 
-  @IsDateString()
+  @IsDate()
   created_at: Date | string;
+
+  user_id: string;
 }

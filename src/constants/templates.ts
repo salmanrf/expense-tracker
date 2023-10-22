@@ -35,6 +35,10 @@ Examples:
 - /mutation IN 2023-10-01 150000000 salary
 `;
 
+export const InvalidMutationAmountMessage = `Invalid number format for mutation amount:
+* Amount must be > 0
+`;
+
 export const ReportCommandFormatMessage = `Report Command Manual
 COMMAND
 /report

@@ -1,4 +1,4 @@
-import { validateSync } from 'class-validator';
+import { IsOptional, validateSync } from 'class-validator';
 import { CreateMutationDto } from 'src/mutations/dtos/create-mutation.dto';
 import { FindMutationsReportDto } from 'src/mutations/dtos/find-mutations-report.dto';
 
@@ -9,6 +9,9 @@ export const COMMAND_KEYS = {
 };
 
 export class MutationCommand extends CreateMutationDto {
+  @IsOptional()
+  category?: string;
+
   constructor(init: Partial<MutationCommand>) {
     super();
 

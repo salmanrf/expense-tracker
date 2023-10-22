@@ -1,3 +1,5 @@
+import * as dfns from 'date-fns';
+
 import {
   COMMANDS,
   COMMAND_KEYS,
@@ -10,8 +12,10 @@ import {
   InvalidReportFormatError,
   UnrecognizedCommandError,
 } from 'src/constants/errors';
-import { PERIOD_TYPES } from 'src/constants/mutation';
+import { MUTATION_TYPES, PERIOD_TYPES } from 'src/constants/mutation';
 import { MutationPeriodType } from 'src/types/mutation-report';
+import { parseDateFromString } from './date.utils';
+import { InvalidMutationAmountMessage } from 'src/constants/templates';
 
 export function parseAndGetCommand(
   message: string,
@@ -48,8 +52,6 @@ export function parseAndGetCommand(
 export function parseMutationCommand(
   command_arguments: string[],
 ): [MutationCommand | null, Error | null] {
-  const copied_args = [...command_arguments];
-
   `
   Parse and instantiate MutationCommand class,
   expects command arguments (not including the command itself)
@@ -65,18 +67,64 @@ export function parseMutationCommand(
 
   returns a tuple containing the command class, and an error, if any.
   `;
+
+  const copied_args = [...command_arguments];
+
   if (!copied_args || copied_args.length === 0) {
     return [null, new InvalidMutationFormatError()];
   }
 
-  return [null, null];
+  const mutationType = copied_args.shift();
+
+  if (!MUTATION_TYPES.includes(mutationType)) {
+    return [null, new InvalidMutationFormatError()];
+  }
+
+  const trxDateStr = copied_args.shift();
+  const parsedDate = parseDateFromString(trxDateStr);
+  let [trxDate] = parsedDate;
+  const [, dateError] = parsedDate;
+
+  let amount: number = +copied_args.shift();
+
+  if (dateError) {
+    trxDate = dfns.startOfDay(new Date());
+    amount = +trxDateStr;
+
+    if (!amount || amount <= 0) {
+      return [
+        null,
+        new InvalidMutationFormatError(
+          `${dateError.message}
+${InvalidMutationAmountMessage}
+          `,
+        ),
+      ];
+    }
+  }
+
+  if (!amount || amount <= 0) {
+    return [null, new InvalidMutationFormatError(InvalidMutationAmountMessage)];
+  }
+
+  const category = copied_args.shift();
+  const description = copied_args.shift();
+
+  return [
+    new MutationCommand({
+      amount,
+      category,
+      description,
+      created_at: trxDate,
+      type: mutationType,
+    }),
+    null,
+  ];
 }
 
 export function parseReportCommand(
   command_arguments: string[],
 ): [ReportCommand | null, Error | null] {
-  const copied_args = [...command_arguments];
-
   `
   Parse and instantiate ReportCommand class,
   expects command arguments (not including the command itself)
@@ -92,6 +140,9 @@ export function parseReportCommand(
 
   returns a tuple containing the command class, and an error, if any.
   `;
+
+  const copied_args = [...command_arguments];
+
   if (!copied_args || copied_args.length === 0) {
     return [null, new InvalidReportFormatError()];
   }
