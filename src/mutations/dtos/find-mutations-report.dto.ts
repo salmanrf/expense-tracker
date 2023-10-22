@@ -1,8 +1,14 @@
 import { IsIn, IsOptional, IsString } from 'class-validator';
+import { PERIOD_TYPES } from 'src/constants/mutation';
+import { MutationPeriodType } from 'src/types/mutation-report';
 
 export class FindMutationsReportDto {
   @IsString()
   @IsOptional()
-  @IsIn(['day', 'week', 'month', 'year'])
-  period_type: string;
+  @IsIn(PERIOD_TYPES)
+  period_type?: MutationPeriodType;
+
+  @IsString()
+  @IsOptional()
+  category?: string;
 }
