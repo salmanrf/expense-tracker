@@ -3,6 +3,8 @@ export class TwilioMessageWebhookDto {
 
   SmsSid: string;
 
+  WaId: string;
+
   AccountSid: string;
 
   MessagingServiceSid: string;
