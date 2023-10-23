@@ -32,7 +32,7 @@ export class CategoriesController {
 
   @Get(':category_id')
   async findOne(@Param('category_id') category_id: number) {
-    const data = await this.categoriesService.findOneCategory(category_id);
+    const data = await this.categoriesService.findOneCategory({ category_id });
 
     if (!data) {
       throw new NotFoundException(`Can't find category with id ${category_id}`);

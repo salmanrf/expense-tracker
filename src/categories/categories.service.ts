@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, ILike, Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { CreateCategoryDto } from './dtos/create-category.dto';
 import { CategoryEntity } from './entities/categories.entity';
 import { FindManyCategoriesDto } from './dtos/find-category.dto';
@@ -12,17 +12,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 @Injectable()
 export class CategoriesService {
   constructor(
-    private readonly dataSource: DataSource,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepo: Repository<CategoryEntity>,
   ) {}
 
   async createCategory(dto: CreateCategoryDto) {
     try {
-      const newCategory = await this.dataSource.manager.save(
-        CategoryEntity,
-        dto,
-      );
+      const newCategory = await this.categoryRepo.save(dto);
 
       return newCategory;
     } catch (error) {
@@ -30,11 +26,25 @@ export class CategoriesService {
     }
   }
 
-  async findOneCategory(category_id: number) {
+  async findOneCategory(criteria: Partial<CategoryEntity>) {
     try {
       const category = await this.categoryRepo.findOne({
-        where: { category_id },
+        where: { ...criteria },
       });
+
+      return category;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getOrCreateCategory(criteria: Partial<CategoryEntity>) {
+    try {
+      let category = await this.findOneCategory(criteria);
+
+      if (!category) {
+        category = await this.createCategory(criteria as CategoryEntity);
+      }
 
       return category;
     } catch (error) {
@@ -47,7 +57,7 @@ export class CategoriesService {
 
     const { limit, offset } = getPaginationParams(pagination);
 
-    const categoryQb = this.dataSource.createQueryBuilder(CategoryEntity, 'c');
+    const categoryQb = this.categoryRepo.createQueryBuilder('c');
 
     if (name) {
       categoryQb.andWhere({ name: ILike(`%${name}%`) });
