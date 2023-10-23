@@ -4,7 +4,7 @@ import { WhatsappService } from './whatsapp.service';
 
 @Controller('/whatsapp')
 export class WhatsappController {
-  private readonly whatsappService: WhatsappService;
+  constructor(private readonly whatsappService: WhatsappService) {}
 
   @Get()
   async hello() {
@@ -20,7 +20,7 @@ export class WhatsappController {
 
       return result;
     } catch (error) {
-      return `Error ${error}`;
+      throw error;
     }
   }
 }

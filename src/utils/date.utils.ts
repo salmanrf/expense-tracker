@@ -18,7 +18,7 @@ export function parseDateFromString(
 
     // ? Parse ISO or RFC
     if (!dfns.isValid(date)) {
-      date = dfns.parse(dateStr, 'dd/mm/yyyy', 0);
+      date = dfns.parse(dateStr, 'dd/MM/yyyy', 0);
     }
 
     return [date, null];
