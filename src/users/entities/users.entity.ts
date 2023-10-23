@@ -1,3 +1,4 @@
+import { MutationEntity } from 'src/mutations/entities/mutations.entity';
 import {
   Check,
   Column,
@@ -16,9 +17,11 @@ export class UserEntity {
   @Check("phone_id NOT LIKE '%[^0-9]%'")
   phone_id: string;
 
-  @CreateDateColumn({ type: 'time without time zone' })
+  mutations: MutationEntity[];
+
+  @CreateDateColumn({ type: 'timestamp without time zone' })
   created_at: Date | string;
 
-  @UpdateDateColumn({ type: 'time without time zone' })
+  @UpdateDateColumn({ type: 'timestamp without time zone' })
   updated_at: Date | string;
 }

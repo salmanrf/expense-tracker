@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MutationEntity } from './entities/mutations.entity';
 import { Repository } from 'typeorm';
+import * as dfns from 'date-fns';
 import { CreateMutationDto } from './dtos/create-mutation.dto';
 import {
   getPaginationParams,
@@ -9,17 +10,44 @@ import {
 } from 'src/utils/pagination.utils';
 import { FindManyMutationsDto } from './dtos/find-mutations.dto';
 import { FindMutationsReportDto } from './dtos/find-mutations-report.dto';
+import {
+  MutationReport,
+  MutationReportResults,
+} from 'src/types/mutation-report';
+import { MutationCommand } from 'src/constants/command';
+import { CategoriesService } from 'src/categories/categories.service';
+import { CategoryEntity } from 'src/categories/entities/categories.entity';
 
 @Injectable()
 export class MutationsService {
   constructor(
     @InjectRepository(MutationEntity)
     private readonly mutationRepo: Repository<MutationEntity>,
+    private readonly categoriesService: CategoriesService,
   ) {}
 
-  async createMutation(dto: CreateMutationDto) {
+  async createMutation(dto: CreateMutationDto | MutationCommand) {
     try {
-      const newMutation = await this.mutationRepo.save(dto);
+      const { ...createDto } = dto;
+      let category: CategoryEntity;
+
+      if (dto instanceof MutationCommand) {
+        const { category: catName } = dto;
+
+        if (catName) {
+          category = await this.categoriesService.getOrCreateCategory({
+            name: dto.category,
+          });
+
+          createDto.category_id = category.category_id;
+        }
+      }
+
+      delete createDto['category'];
+
+      const newMutation = await this.mutationRepo.save(
+        createDto as CreateMutationDto,
+      );
 
       return newMutation;
     } catch (error) {
@@ -128,50 +156,76 @@ export class MutationsService {
     try {
       const mutationQb = this.mutationRepo.createQueryBuilder('m');
 
-      const { period_type } = dto;
+      const { period_type, category } = dto;
 
       mutationQb.andWhere({ user_id });
 
+      mutationQb.leftJoin('m.category', 'c');
+
+      mutationQb.groupBy('c.category_id');
+      mutationQb.addGroupBy('m.type');
+
+      mutationQb.select([
+        'c.name category',
+        'm.type type',
+        'SUM(m.amount)::NUMERIC amount',
+      ]);
+
+      let trx_date_start: Date;
+      let trx_date_end: Date;
+
       if (period_type === 'day') {
+        trx_date_start = dfns.startOfDay(new Date());
+        trx_date_end = dfns.endOfDay(trx_date_start);
+
         mutationQb.andWhere(
           "DATE_TRUNC('DAY', NOW()) = DATE_TRUNC('DAY', m.created_at) ",
         );
       }
 
       if (period_type === 'week') {
+        trx_date_start = dfns.startOfWeek(new Date());
+        trx_date_end = dfns.endOfWeek(trx_date_start);
+
         mutationQb.andWhere(
           "DATE_TRUNC('WEEK', NOW()) = DATE_TRUNC('WEEK', m.created_at) ",
         );
       }
 
       if (period_type === 'month') {
+        trx_date_start = dfns.startOfMonth(new Date());
+        trx_date_end = dfns.endOfMonth(trx_date_start);
+
         mutationQb.andWhere(
           "DATE_TRUNC('MONTH', NOW()) = DATE_TRUNC('MONTH', m.created_at) ",
         );
       }
 
       if (period_type === 'year') {
+        trx_date_start = dfns.startOfYear(new Date());
+        trx_date_end = dfns.endOfYear(trx_date_start);
+
         mutationQb.andWhere(
           "DATE_TRUNC('YEAR', NOW()) = DATE_TRUNC('YEAR', m.created_at) ",
         );
       }
 
-      mutationQb.leftJoin('m.category', 'c');
+      if (category) {
+        mutationQb.andWhere('"c"."name" = :category', { category });
+      }
 
-      mutationQb.groupBy('c.category_id');
-      mutationQb.addGroupBy('m.type');
-      mutationQb.addGroupBy('m.created_at');
+      const results: MutationReport[] = await mutationQb.getRawMany();
 
-      mutationQb.select([
-        'c.name category',
-        'm.type type',
-        'm.created_at created_at',
-        'SUM(m.amount)::NUMERIC amount',
-      ]);
+      const data: MutationReportResults = {
+        items: results.map((r) => ({ ...r, amount: +r.amount })),
+        period_type,
+        trx_date_start: dfns.format(trx_date_start, 'eeee, dd MMMM yyyy'),
+        trx_date_end: dfns.format(trx_date_end, 'eeee, dd MMMM yyyy'),
+      };
 
-      const results = await mutationQb.getRawMany();
+      console.dir(data, { depth: null, colors: true });
 
-      return results.map((r) => ({ ...r, ['amount']: +r['amount'] }));
+      return data;
     } catch (error) {
       throw error;
     }
