@@ -9,11 +9,11 @@ import {
 
 @Entity('categories')
 export class CategoryEntity {
-  @PrimaryGeneratedColumn({ type: 'int8' })
+  @PrimaryGeneratedColumn('increment')
   category_id: number;
 
   @Column({ type: 'varchar', length: 100, nullable: false, unique: true })
-  @Check('length(name) > 3 AND length(name) < 100')
+  @Check('length(name) >= 3 AND length(name) < 100')
   name: string;
 
   @CreateDateColumn({ type: 'timestamp without time zone', nullable: false })
