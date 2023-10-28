@@ -37,6 +37,7 @@ export class MutationsService {
         if (catName) {
           category = await this.categoriesService.getOrCreateCategory({
             name: dto.category,
+            user_id: dto.user_id,
           });
 
           createDto.category_id = category.category_id;

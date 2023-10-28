@@ -1,9 +1,11 @@
+import { CategoryEntity } from 'src/categories/entities/categories.entity';
 import { MutationEntity } from 'src/mutations/entities/mutations.entity';
 import {
   Check,
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -18,6 +20,9 @@ export class UserEntity {
   phone_id: string;
 
   mutations: MutationEntity[];
+
+  @OneToMany(() => CategoryEntity, (cat) => cat.user)
+  categories: CategoryEntity[];
 
   @CreateDateColumn({ type: 'timestamp without time zone' })
   created_at: Date | string;
