@@ -68,55 +68,61 @@ export function parseMutationCommand(
   returns a tuple containing the command class, and an error, if any.
   `;
 
-  const copied_args = [...command_arguments];
+  const args = [...command_arguments];
 
-  if (!copied_args || copied_args.length === 0) {
+  if (!args || args.length === 0) {
     return [null, new InvalidMutationFormatError()];
   }
 
-  const mutationType = copied_args.shift();
+  let created_at: Date;
+  let amount: number = -1;
 
-  if (!MUTATION_TYPES.includes(mutationType)) {
+  let arg: string = args.shift();
+
+  if (!MUTATION_TYPES.includes(arg)) {
     return [null, new InvalidMutationFormatError()];
   }
 
-  const trxDateStr = copied_args.shift();
-  const parsedDate = parseDateFromString(trxDateStr);
-  let [trxDate] = parsedDate;
-  const [, dateError] = parsedDate;
+  const type = arg;
 
-  let amount: number = +copied_args.shift();
+  arg = args.shift();
 
-  if (dateError) {
-    trxDate = dfns.startOfDay(new Date());
-    amount = +trxDateStr;
+  // ? [Date, Error]
+  const parsedDate = parseDateFromString(arg);
 
-    if (!amount || amount <= 0) {
-      return [
-        null,
-        new InvalidMutationFormatError(
-          `${dateError.message}
-${InvalidMutationAmountMessage}
-          `,
-        ),
-      ];
-    }
+  if (parsedDate[0]) {
+    created_at = parsedDate[0];
+    arg = args.shift();
+  } else if (parsedDate[1]) {
+    created_at = dfns.startOfDay(new Date());
+    amount = +arg;
+  }
+
+  if (amount <= 0) {
+    amount = +arg;
   }
 
   if (!amount || amount <= 0) {
-    return [null, new InvalidMutationFormatError(InvalidMutationAmountMessage)];
+    return [
+      null,
+      new InvalidMutationFormatError(
+        `${parsedDate[1].message}
+${InvalidMutationAmountMessage}
+          `,
+      ),
+    ];
   }
 
-  const category = copied_args.shift();
-  const description = copied_args.shift();
+  const category = args.shift();
+  const description = args.shift();
 
   return [
     new MutationCommand({
+      type,
+      created_at,
       amount,
       category,
       description,
-      created_at: trxDate,
-      type: mutationType,
     }),
     null,
   ];
@@ -141,19 +147,19 @@ export function parseReportCommand(
   returns a tuple containing the command class, and an error, if any.
   `;
 
-  const copied_args = [...command_arguments];
+  const args = [...command_arguments];
 
-  if (!copied_args || copied_args.length === 0) {
+  if (!args || args.length === 0) {
     return [null, new InvalidReportFormatError()];
   }
 
-  const period_type = copied_args.shift() as MutationPeriodType;
+  const period_type = args.shift() as MutationPeriodType;
 
   if (!PERIOD_TYPES.includes(period_type)) {
     return [null, new InvalidReportFormatError()];
   }
 
-  const category = copied_args.shift();
+  const category = args.shift();
 
   return [new ReportCommand({ period_type, category }), null];
 }
