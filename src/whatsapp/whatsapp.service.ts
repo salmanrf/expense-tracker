@@ -156,7 +156,7 @@ export class WhatsappService {
     const message = await this.twilioClient.messages.create({
       from: this.configService.get('TWILIO_APP_WA_ID'),
       body: 'Hello World!',
-      to: 'whatsapp:+628979253935',
+      to: '',
     });
 
     console.log('Message', message);
