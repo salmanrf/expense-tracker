@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { TwilioMessageWebhookDto } from './dtos/twilio-message-webhook.dto';
 import { WhatsappService } from './whatsapp.service';
 
@@ -14,12 +15,17 @@ export class WhatsappController {
   @Post('/message')
   async handleTwilioWebhookMessage(
     @Body() messageDto: TwilioMessageWebhookDto,
+    @Res() res: Response,
   ) {
     try {
       const result = await this.whatsappService.respondUserMessage(messageDto);
 
-      return result;
+      res.setHeader('Content-Type', 'application/xml');
+
+      res.send(result);
     } catch (error) {
+      console.log('ERROR at handleTwilioWebhookMessage', error);
+
       throw error;
     }
   }
