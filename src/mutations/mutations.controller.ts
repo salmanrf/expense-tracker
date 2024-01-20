@@ -7,7 +7,9 @@ import {
   Param,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { MutationsService } from './mutations.service';
 import { CreateMutationDto } from './dtos/create-mutation.dto';
 import { BaseAPIResponse } from 'src/dtos/api';
@@ -49,6 +51,21 @@ export class MutationsController {
     };
 
     return res;
+  }
+
+  @Get('/pdf/:file_id')
+  async getTransactionReportFile(
+    @Res() res: Response,
+    @Param('file_id') file_id: string,
+  ) {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename=test-proposal.pdf');
+
+    const fileStream = await this.mutationsService.getTransactionFile(file_id);
+
+    fileStream.pipe(res);
+
+    return;
   }
 
   @Get(':mutation_id')

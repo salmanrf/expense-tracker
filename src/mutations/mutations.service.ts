@@ -1,8 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MutationEntity } from './entities/mutations.entity';
 import { Repository } from 'typeorm';
+import { join } from 'path';
 import * as dfns from 'date-fns';
+import fs from 'fs';
+import fsp from 'fs/promises';
+import { MutationEntity } from './entities/mutations.entity';
 import { CreateMutationDto } from './dtos/create-mutation.dto';
 import {
   getPaginationParams,
@@ -56,6 +59,22 @@ export class MutationsService {
     }
   }
 
+  async getTransactionFile(file_id: string) {
+    try {
+      const filePath = join(__dirname, '../..', 'dump', `${file_id}.pdf`); // Update the path to your file
+
+      await fsp.access(filePath, fsp.constants.F_OK);
+
+      const fileStream = fs.createReadStream(filePath);
+
+      return fileStream;
+    } catch (error) {
+      console.log('error', error);
+
+      throw new NotFoundException();
+    }
+  }
+
   async findOneMutation(mutation_id: string) {
     try {
       const mutation = await this.mutationRepo.findOne({
@@ -83,6 +102,8 @@ export class MutationsService {
 
     const mutationQb = this.mutationRepo.createQueryBuilder('m');
 
+    mutationQb.leftJoinAndSelect('m.category', 'c');
+
     if (category_id) {
       mutationQb.andWhere({ category_id });
     }
@@ -92,21 +113,23 @@ export class MutationsService {
     }
 
     if (amount_start != null) {
-      mutationQb.andWhere('amount >= :amount_start', { amount_start });
+      mutationQb.andWhere('m.amount >= :amount_start', { amount_start });
     }
 
     if (amount_end != null) {
-      mutationQb.andWhere('amount <= :amount_end', { amount_end });
+      mutationQb.andWhere('m.amount <= :amount_end', { amount_end });
     }
 
     if (created_at_start != null) {
-      mutationQb.andWhere('created_at >= :created_at_start', {
+      mutationQb.andWhere('m.created_at >= :created_at_start', {
         created_at_start,
       });
     }
 
     if (created_at_end != null) {
-      mutationQb.andWhere('created_at <= :created_at_end', { created_at_end });
+      mutationQb.andWhere('m.created_at <= :created_at_end', {
+        created_at_end,
+      });
     }
 
     mutationQb.leftJoinAndSelect('m.user', 'u');
@@ -123,8 +146,14 @@ export class MutationsService {
       sort_order = 'DESC';
     }
 
-    mutationQb.take(limit);
-    mutationQb.skip(offset);
+    if (!isNaN(limit)) {
+      mutationQb.take(limit);
+    }
+
+    if (!isNaN(offset)) {
+      mutationQb.skip(offset);
+    }
+
     mutationQb.orderBy(sort_field, sort_order);
 
     const results = await mutationQb.getManyAndCount();

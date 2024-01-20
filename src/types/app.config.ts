@@ -3,6 +3,7 @@ export interface AppConfig {
   TWILIO_AUTH_TOKEN: string;
   TWILIO_APP_WA_ID: string;
   POSTGRES_URI: string;
+  SERVER_URL: string;
 }
 
 export type ErrorDetails = {

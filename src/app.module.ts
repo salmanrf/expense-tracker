@@ -24,6 +24,7 @@ dotenv.config();
         TWILIO_ACCOUNT_SID: joi.string().required(),
         TWILIO_AUTH_TOKEN: joi.string().required(),
         TWILIO_APP_WA_ID: joi.string().required(),
+        SERVER_URL: joi.string().required(),
       }),
     }),
     TypeOrmModule.forRoot({
