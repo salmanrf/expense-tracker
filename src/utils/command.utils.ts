@@ -5,6 +5,7 @@ import {
   COMMAND_KEYS,
   MutationCommand,
   ReportCommand,
+  TransactionsCommand,
 } from 'src/constants/command';
 import {
   InvalidFormatError,
@@ -34,14 +35,22 @@ export function parseAndGetCommand(
     return [null, new UnrecognizedCommandError()];
   }
 
+  const args = words.slice(1);
+
   if (command === COMMAND_KEYS.MUTATION) {
-    const commandDto = parseMutationCommand(words.slice(1));
+    const commandDto = parseMutationCommand(args);
 
     return commandDto;
   }
 
   if (command === COMMAND_KEYS.REPORT) {
-    const commandDto = parseReportCommand(words.slice(1));
+    const commandDto = parseReportCommand(args);
+
+    return commandDto;
+  }
+
+  if (command === COMMAND_KEYS.TRANSACTIONS) {
+    const commandDto = parseTransactionsCommand(args);
 
     return commandDto;
   }
@@ -162,4 +171,56 @@ export function parseReportCommand(
   const category = args.shift();
 
   return [new ReportCommand({ period_type, category }), null];
+}
+
+export function parseTransactionsCommand(
+  command_arguments: string[],
+): [TransactionsCommand | null, Error | null] {
+  `
+  Parse and instantiate TransactionsCommand class,
+  expects command arguments (not including the command itself)
+  
+  The 'report' command arguments should be in the format:
+  <period_start>
+  
+  Examples:
+  - 2024-01-01
+
+  <period_end>
+
+  Examples:
+  - 2024-02-20
+
+  returns a tuple containing the command class, and an error, if any.
+  `;
+
+  const args = [...command_arguments];
+
+  if (!args || args.length === 0) {
+    return [null, new InvalidReportFormatError()];
+  }
+
+  let arg: string = args.shift();
+
+  const [startDate, startDatError] = parseDateFromString(arg);
+
+  if (startDatError) {
+    throw startDatError;
+  }
+
+  arg = args.shift();
+
+  const [endDate, endDatError] = parseDateFromString(arg);
+
+  if (endDatError) {
+    throw endDatError;
+  }
+
+  return [
+    new TransactionsCommand({
+      created_at_start: dfns.format(startDate, 'yyyy-MM-dd'),
+      created_at_end: dfns.format(endDate, 'yyyy-MM-dd'),
+    }),
+    null,
+  ];
 }
