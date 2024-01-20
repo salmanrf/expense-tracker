@@ -1,13 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import twilio from 'twilio';
+import PdfPrinter from 'pdfmake';
+import { join } from 'path';
+import * as fs from 'fs';
+import * as genPwd from 'generate-password';
 import { AppConfig } from 'src/types/app.config';
-import * as twilio from 'twilio';
 import { TwilioMessageWebhookDto } from './dtos/twilio-message-webhook.dto';
 import { parseAndGetCommand } from 'src/utils/command.utils';
-import { MutationCommand, ReportCommand } from 'src/constants/command';
+import {
+  MutationCommand,
+  ReportCommand,
+  TransactionsCommand,
+} from 'src/constants/command';
 import { UsersService } from 'src/users/users.service';
 import { MutationsService } from 'src/mutations/mutations.service';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
+import { FindManyMutationsDto } from 'src/mutations/dtos/find-mutations.dto';
+import { formatReportPDFDef } from 'src/lib/pdf-templates';
+import { PdfFonts } from 'src/lib/fonts';
 
 @Injectable()
 export class WhatsappService {
@@ -50,6 +61,14 @@ export class WhatsappService {
 
       if (command instanceof ReportCommand) {
         commandResults = await this.handleReportCommand(
+          messageDto,
+          command,
+          twiml,
+        );
+      }
+
+      if (command instanceof TransactionsCommand) {
+        commandResults = await this.handleTransactionsCommand(
           messageDto,
           command,
           twiml,
@@ -152,13 +171,82 @@ export class WhatsappService {
     }
   }
 
-  async sendMessage() {
+  async handleTransactionsCommand(
+    messageDto: TwilioMessageWebhookDto,
+    command: TransactionsCommand,
+    twiml: MessagingResponse,
+  ): Promise<[MessagingResponse, Error | null]> {
+    try {
+      const user = await this.usersService.getOrCreateUser({
+        phone_id: messageDto.WaId,
+      });
+
+      command.user_id = user.user_id;
+
+      command.sort_order = 'ASC';
+
+      const results = await this.mutationssService.findManyMutations(
+        command as FindManyMutationsDto,
+      );
+      const pdfDocDef = formatReportPDFDef({
+        user,
+        mutations: results.items,
+        start_date: command.created_at_start,
+        end_date: command.created_at_end,
+      });
+
+      const pdfPassword = genPwd.generate({ length: 18, numbers: true });
+
+      pdfDocDef.userPassword = pdfPassword;
+
+      const pdfPrinter = new PdfPrinter(PdfFonts);
+
+      const { nanoid } = await import('nanoid');
+
+      const pdfFileId = nanoid(12);
+
+      const pdfDoc = pdfPrinter.createPdfKitDocument(pdfDocDef as any);
+
+      await new Promise((resolve, reject) => {
+        pdfDoc.on('end', () => {
+          resolve(null);
+        });
+
+        pdfDoc.on('error', (_) => {
+          reject('Error when generating pdf file');
+        });
+
+        pdfDoc.pipe(
+          fs.createWriteStream(
+            join(__dirname, '../..', 'dump', `${pdfFileId}.pdf`),
+          ),
+        );
+
+        pdfDoc.end();
+      });
+
+      twiml.message(
+        `Click the link below to access your transactions pdf report:\nPassword: ${pdfPassword}`,
+      );
+      twiml.message(
+        `${this.configService.get(
+          'SERVER_URL',
+        )}/api/mutations/pdf/${pdfFileId}`,
+      );
+
+      return [twiml, null];
+    } catch (error) {
+      return [null, error];
+    }
+  }
+
+  async sendMessage(to: string, body: string) {
     const message = await this.twilioClient.messages.create({
+      to,
+      body,
       from: this.configService.get('TWILIO_APP_WA_ID'),
-      body: 'Hello World!',
-      to: '',
     });
 
-    console.log('Message', message);
+    return message;
   }
 }
